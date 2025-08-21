@@ -82,4 +82,4 @@ The 8T SRAM cell represents a significant advancement over traditional 6T design
 3. LTSpice User Manual and Documentation
 4. BSIM Model Documentation for Advanced Technology Nodes
 
-5. Project by Ameya Dange.
+###### Project by Ameya Dange.
