@@ -1,0 +1,84 @@
+* 8T SRAM Cell Testbench for LTSpice
+.title 8T SRAM Cell Testbench
+
+.include "ptm_45nm.lib"
+
+.param VDD=1.0V
+.param VSS=0V
+.param tper=10n
+.param trise=0.1n
+.param tfall=0.1n
+.param tpw=4n
+
+* 8T SRAM Cell Definition
+.subckt sram_8t VDD VSS Q QB WBL WBLB WWL RBL RWL
+* Storage inverters
+MP1 Q QB VDD VDD pmos w=240n l=45n
+MP2 QB Q VDD VDD pmos w=240n l=45n
+MN1 Q QB N1 VSS nmos w=120n l=45n
+MN2 QB Q N2 VSS nmos w=120n l=45n
+MN3 N1 VSS VSS VSS nmos w=120n l=45n
+MN4 N2 VSS VSS VSS nmos w=120n l=45n
+
+* Write access transistors
+MN5 Q WWL WBL VSS nmos w=120n l=45n
+MN6 QB WWL WBLB VSS nmos w=120n l=45n
+
+* Read access transistors
+MN7 RBL Q N3 VSS nmos w=120n l=45n
+MN8 N3 RWL VSS VSS nmos w=120n l=45n
+.ends
+
+X1 VDD VSS Q QB WBL WBLB WWL RBL RWL sram_8t
+
+VDD VDD 0 DC {VDD}
+VSS VSS 0 DC 0V
+
+VRBLpre RBLpre 0 DC {VDD}
+SRBLpre RBL RBLpre RWLb OFF
+.model SW SW(Ron=100 Roff=1G Vt=0.5V Vh=0.1V)
+
+.IC V(Q)=0V V(QB)={VDD}
+
+VWBL WBL 0 PWL(0n 0V 5n 0V 6n {VDD} 25n {VDD} 26n 0V 45n 0V 46n {VDD} 60n {VDD})
+VWBLB WBLB 0 PWL(0n {VDD} 5n {VDD} 6n 0V 25n 0V 26n {VDD} 45n {VDD} 46n 0V 60n 0V)
+
+VWWL WWL 0 PWL(0n 0V 5n 0V 6n {VDD} 15n {VDD} 16n 0V 25n 0V 26n {VDD} 35n {VDD} 36n 0V 45n 0V 46n {VDD} 55n {VDD} 56n 0V)
+
+VRWL RWL 0 PWL(0n 0V 18n 0V 19n {VDD} 23n {VDD} 24n 0V 38n 0V 39n {VDD} 43n {VDD} 44n 0V 58n 0V 59n {VDD} 63n {VDD} 64n 0V)
+
+VRWLB RWLb 0 PWL(0n {VDD} 18n {VDD} 19n 0V 23n 0V 24n {VDD} 38n {VDD} 39n 0V 43n 0V 44n {VDD} 58n {VDD} 59n 0V 63n 0V 64n {VDD})
+
+CRBL RBL 0 10f
+
+.tran 0.01n 70n
+
+.meas tran write_delay_1 TRIG V(WWL) VAL={VDD/2} RISE=1 TARG V(Q) VAL={VDD/2} RISE=1
+.meas tran write_delay_0 TRIG V(WWL) VAL={VDD/2} RISE=2 TARG V(Q) VAL={VDD/2} FALL=1
+.meas tran read_delay_1 TRIG V(RWL) VAL={VDD/2} RISE=1 TARG V(RBL) VAL={VDD*0.9} FALL=1
+.meas tran read_delay_0 TRIG V(RWL) VAL={VDD/2} RISE=2 TARG V(RBL) VAL={VDD*0.9} FALL=1
+
+.meas tran avg_power AVG POWER FROM=0n TO=70n
+.meas tran write_power AVG POWER FROM=6n TO=15n
+.meas tran read_power AVG POWER FROM=19n TO=23n
+
+.meas tran hold_margin MIN V(Q) FROM=16n TO=25n
+
+.dc VWL1 0 {VDD} 0.01V VWL2 0 {VDD} 0.01V
+
+.step param VDD 0.9V 1.1V 0.1V
+.step temp -40 125 25
+
+.param sigma_vth=30mV
+.step param vth_var -90mV 90mV 30mV
+
+.probe V(Q) V(QB) V(WBL) V(WBLB) V(WWL) V(RBL) V(RWL)
+.probe I(VDD) I(X1:MP1) I(X1:MN1) I(X1:MN7)
+
+.end
+
+.options gmin=1e-15
+.options abstol=1e-15
+.options reltol=1e-6
+.options vntol=1e-9
+.options method=gear
